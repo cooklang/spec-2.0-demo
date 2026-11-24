@@ -1,0 +1,343 @@
+<title>Cooklang Recipe Flow</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a toolbar over one board — ingredients as arrow-tipped tickets on the left, steps as
+   blocks that point into the next, a dark main line that points down to a plate. */
+:root {
+  --page: #e8ebee;        /* steel-bench grey */
+  --ink: #1d2329;
+  --ink-soft: #5b6670;
+  --rule: #c5ccd3;
+  --board: #fbfcfc;       /* the board the chart sits on */
+  --board-dot: #dfe4e8;
+  --board-ink: #1d2329;
+  --board-soft: #66717b;
+  --line: #2b3740;        /* the main line: slate */
+  --accent: #c8452f;      /* tomato: the plate rim, focus rings */
+  --warn: #b26a12;
+  --err: #b8322a;
+  --control: #ffffff;
+  --spine-shift: -18%;    /* how much darker the slate main line sits than its base */
+  --font-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --page: #121619; --ink: #e3e8ec; --ink-soft: #9aa6b0; --rule: #313a42;
+    --board: #1b2126; --board-dot: #2a3238; --board-ink: #e3e8ec; --board-soft: #9aa6b0;
+    --line: #3d4c57; --accent: #e8664f; --warn: #e6a04f; --err: #f07a6f; --control: #1f262c; --spine-shift: 2%; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --page: #121619; --ink: #e3e8ec; --ink-soft: #9aa6b0; --rule: #313a42;
+  --board: #1b2126; --board-dot: #2a3238; --board-ink: #e3e8ec; --board-soft: #9aa6b0;
+  --line: #3d4c57; --accent: #e8664f; --warn: #e6a04f; --err: #f07a6f; --control: #1f262c; --spine-shift: 2%; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: var(--page); color: var(--ink);
+  font-family: var(--font-body); font-size: 15px; line-height: 1.4;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 48px;
+}
+code { font-family: var(--font-mono); font-size: .9em; }
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+.wrap > * { min-width: 0; }
+
+/* ---- toolbar ---- */
+header.bar { display: flex; flex-wrap: wrap; align-items: end; gap: 12px 24px; }
+header.bar h1 { font-family: var(--font-display); font-weight: 800; font-size: 24px; letter-spacing: -.01em; margin: 0; }
+header.bar h1 small { display: block; font-family: var(--font-body); font-weight: 400; font-size: 13px; letter-spacing: 0; color: var(--ink-soft); margin-top: 2px; }
+.controls { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: end; margin-left: auto; }
+.field { display: grid; gap: 3px; font-size: 13px; color: var(--ink-soft); }
+.field span { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+select, button, textarea {
+  font: inherit; color: var(--ink); background: var(--control);
+  border: 1px solid var(--rule); border-radius: 8px; padding: 6px 10px;
+}
+select:focus-visible, button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button { cursor: pointer; }
+button[aria-pressed="true"] { background: var(--line); color: #fff; border-color: var(--line); }
+.toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--ink); padding: 6px 2px; }
+#choices { display: contents; }
+
+/* ---- source editor ---- */
+.source { display: grid; gap: 8px; }
+.source textarea { width: 100%; min-height: 300px; font-family: var(--font-mono); font-size: 13px; line-height: 1.55; resize: vertical; }
+.source .row { display: flex; gap: 10px; align-items: center; font-size: 13px; color: var(--ink-soft); flex-wrap: wrap; }
+
+/* ---- the board ---- */
+/* the chart scrolls sideways inside the board; the page never does */
+.plate {
+  background-color: var(--board); color: var(--board-ink);
+  background-image: radial-gradient(var(--board-dot) 1.2px, transparent 1.3px);
+  background-size: 18px 18px;
+  border: 1px solid var(--rule); border-radius: 14px;
+  padding: 26px clamp(14px, 3vw, 36px) 22px;
+  display: grid; gap: 22px; min-width: 0;
+}
+.plate h2 { font-family: var(--font-display); font-weight: 800; font-size: clamp(26px, 3.4vw, 38px); letter-spacing: -.02em; margin: 0; text-wrap: balance; }
+.plate .meta { color: var(--board-soft); font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; margin-top: 4px; }
+.chart-wrap { overflow-x: auto; padding: 4px 4px 4px 0; }
+.scroll-hint { display: none; font-size: 13px; color: var(--board-soft); margin: -12px 0 0; }
+@media (max-width: 760px) { .scroll-hint { display: block; } }
+.chart { display: grid; gap: 5px 7px; grid-auto-rows: minmax(40px, auto); font-size: 15px; }
+
+/* every ticket and branch step points right into what it feeds */
+.cell { position: relative; display: flex; min-width: 0; color: #1d2329;
+  background: hsl(var(--h) 58% var(--l)); border-radius: 7px; }
+.cell .chev { display: none; }
+.cell .txt { flex: 1; min-width: 0; padding: 8px 12px; align-self: center; }
+.leaf, .branch { clip-path: polygon(0 0, calc(100% - 11px) 0, 100% 50%, calc(100% - 11px) 100%, 0 100%); border-radius: 7px 0 0 7px; }
+.leaf .txt, .branch .txt { padding-right: 22px; }
+.leaf { background: hsl(var(--h) 62% calc(var(--l) + 6%)); box-shadow: inset 4px 0 0 hsl(var(--h) 55% 48%); }
+.leaf .txt { padding-left: 16px; }
+.leaf .q { font-family: var(--font-mono); font-size: 13.5px; font-weight: 500; margin-right: 2px; }
+.leaf .note { color: rgba(29,35,41,.66); font-size: 13px; }
+.leaf .note::before { content: "· "; }
+.tag { font-family: var(--font-mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; padding: 1px 5px; border-radius: 4px; background: rgba(255,255,255,.6); white-space: nowrap; vertical-align: 1px; }
+.alt { font-weight: 700; color: rgba(29,35,41,.6); }
+.ref { background: repeating-linear-gradient(135deg, hsl(var(--h) 62% 88%) 0 8px, hsl(var(--h) 62% 84%) 8px 16px); }
+.ref .n { font-family: var(--font-mono); font-style: normal; font-size: 13.5px; font-weight: 500; }
+.ref .from { font-size: 12.5px; color: rgba(29,35,41,.65); }
+.missing { background: transparent; box-shadow: none; outline: 1.5px dashed var(--err); outline-offset: -2px; color: var(--err); }
+
+.step .txt { font-size: 14px; line-height: 1.35; }
+.step .no { font-family: var(--font-mono); font-size: 11px; display: inline-block; min-width: 18px; padding: 0 4px; margin-right: 6px; text-align: center; border-radius: 9px; background: rgba(255,255,255,.55); vertical-align: 1px; }
+.step .act { font-weight: 600; }
+.step .prod { font-family: var(--font-mono); font-style: normal; font-size: .88em; padding: 0 4px; border-radius: 4px; background: rgba(255,255,255,.5); }
+.step .tm { font-family: var(--font-mono); font-size: .9em; white-space: nowrap; }
+.step .cw { text-decoration: underline dotted; text-decoration-color: rgba(29,35,41,.45); text-underline-offset: 3px; }
+.makes { margin-top: 6px; font-family: var(--font-mono); font-size: 12px; opacity: .8; }
+.makes i { font-style: normal; font-weight: 500; }
+
+/* the main line: blocks that point down into the next */
+.spine { clip-path: polygon(0 0, 100% 0, 100% calc(100% - 12px), 50% 100%, 0 calc(100% - 12px)); border-radius: 9px 9px 0 0; }
+.spine .txt { padding: 12px 16px 22px; font-size: 15.5px; }
+.spine.ink { background: hsl(var(--h) 26% calc(var(--l) + var(--spine-shift))); color: #f1f5f8; }
+.spine.ink .no, .spine.ink .prod { background: rgba(255,255,255,.14); }
+.spine.ink .cw { text-decoration-color: rgba(255,255,255,.5); }
+
+.conn { background: none; justify-content: center; align-items: center; min-height: 34px; }
+.conn::before { content: ""; position: absolute; top: -2px; bottom: -2px; left: 50%; border-left: 2px dashed var(--board-soft); opacity: .6; }
+.conn .down { display: none; }
+.conn .clbl { position: relative; font-family: var(--font-mono); font-style: normal; font-size: 12px; padding: 2px 10px; border-radius: 999px; background: var(--board); color: var(--board-ink); border: 1px solid var(--rule); }
+
+.yield { background: none; justify-content: center; padding-top: 10px; }
+.yield .arrow { width: 156px; aspect-ratio: 1; max-width: 100%; border-radius: 50%; display: grid; place-items: center; text-align: center;
+  background: radial-gradient(circle, #fffdf9 0 57%, #efe9e0 58% 62%, var(--accent) 63% 100%);
+  box-shadow: 0 6px 18px -10px rgba(0,0,0,.5); color: #1d2329; }
+.yield .arrow span { font-family: var(--font-display); font-weight: 600; font-size: 14px; line-height: 1.2; max-width: 11ch; }
+
+.setup { display: grid; gap: 5px; }
+.setup-row { border: 1.5px dashed var(--rule); border-radius: 8px; padding: 8px 14px; font-size: 14px; background: var(--board); }
+.setup-row::before { content: "Before you start"; font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--board-soft); margin-right: 10px; }
+.setup-row .no { font-family: var(--font-mono); font-size: 11px; color: var(--board-soft); margin-right: 5px; }
+.setup-row .act { font-weight: 600; }
+
+.extra h3 { font-family: var(--font-display); font-weight: 600; font-size: 18px; margin: 6px 0 8px; color: var(--board-ink); }
+.extra h3 i { font-style: normal; font-family: var(--font-mono); font-size: 15px; }
+
+/* ---- under the chart: swaps, also makes, credit ---- */
+.under { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; align-items: start; }
+.box { min-width: 0; border: 1.5px dashed var(--rule); border-radius: 12px; padding: 12px 16px 14px; background: var(--board); }
+.box .tab { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--board-soft); margin-bottom: 8px; }
+.box ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+.box li { padding-left: 22px; text-indent: -22px; font-size: 14.5px; }
+.box li::before { content: "⇄"; display: inline-block; width: 22px; text-indent: 0; color: var(--accent); }
+.box li .why { color: var(--board-soft); }
+.box.makes-box { border-style: solid; }
+.box.makes-box li::before { content: "+"; font-family: var(--font-mono); }
+.credit { font-size: 12.5px; color: var(--board-soft); }
+
+/* ---- reading notes and reports ---- */
+.panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+.panel { min-width: 0; }
+.panel h3 { font-family: var(--font-mono); font-weight: 500; text-transform: uppercase; letter-spacing: .08em; font-size: 11.5px; margin: 0 0 10px; color: var(--ink-soft); }
+.panel p, .panel li { font-size: 14px; max-width: 68ch; }
+.panel ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+.reports li { list-style: none; margin-left: -18px; display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: baseline; }
+.lvl { font-family: var(--font-mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; border-radius: 4px; padding: 1px 6px; border: 1px solid currentColor; white-space: nowrap; }
+.lvl.error { color: var(--err); } .lvl.warn { color: var(--warn); } .lvl.info { color: var(--ink-soft); }
+.panel a { color: var(--accent); }
+.empty { color: var(--ink-soft); font-style: italic; }
+details.notes summary { cursor: pointer; color: var(--board-soft); font-size: 13px; }
+details.notes p { font-size: 13px; color: var(--board-soft); margin: 6px 0 0; }
+
+@media (max-width: 640px) {
+  .controls { margin-left: 0; }
+  .plate { padding-top: 20px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .chart .cell { animation: rise .3s ease-out both; }
+  @keyframes rise { from { transform: translateY(3px); } to { transform: none; } }
+}
+</style>
+
+<div class="wrap">
+  <header class="bar">
+    <h1>Cooklang Recipe Flow<small>Recipes drawn from the graph that <code>-&gt; name</code> and <code>@&amp;name{}</code> spell out (spec proposal 0027)</small></h1>
+    <div class="controls">
+      <label class="field" for="recipe"><span>Recipe</span><select id="recipe"></select></label>
+      <div id="choices"></div>
+      <button id="edit" type="button" aria-pressed="false" aria-controls="source">Edit source</button>
+    </div>
+  </header>
+
+  <section class="source" id="source" hidden>
+    <textarea id="src" spellcheck="false" aria-label="Recipe source in Cooklang"></textarea>
+    <div class="row"><button id="reset" type="button">Revert to example</button><span>The chart redraws as you type.</span></div>
+  </section>
+
+  <article class="plate" id="plate"></article>
+
+  <div class="panels">
+    <section class="panel">
+      <h3>How the chart reads the file</h3>
+      <ul>
+        <li>Each block is a step; the small number is its place in the file. A step carries on from the one before it in its section unless that one named a product (rule 9).</li>
+        <li><code>-&gt; name</code> names what a step or section makes; <code>@&amp;name{}</code> later pulls it in. That is the only way a branch joins the main line (rules 1–8).</li>
+        <li>The right-hand column is the longest line to the dish; everything else flows into it from the left. A product used twice is drawn once; the second use shows <i>“from step N”</i>.</li>
+        <li>Steps with nothing going in at the top of the recipe (grease the tin, preheat) sit above the chart. Bold words are the step actions written in backticks.</li>
+      </ul>
+      <p>The syntax is in three open proposals to the Cooklang spec:
+        <a href="https://github.com/cooklang/spec/pull/165">0027 products</a>,
+        <a href="https://github.com/cooklang/spec/pull/167">0029 step actions</a> and
+        <a href="https://github.com/cooklang/spec/pull/162">0025 alternatives and labels</a>.</p>
+    </section>
+    <section class="panel">
+      <h3>What the parser reports</h3>
+      <ul class="reports" id="reports"></ul>
+    </section>
+  </div>
+</div>
+
+<script>/*__CORE__*/</script>
+<script>
+const RECIPES = /*__RECIPES__*/[];
+(function () {
+  const $ = id => document.getElementById(id);
+  const sel = $('recipe'), src = $('src'), plate = $('plate'), choicesEl = $('choices'), reportsEl = $('reports');
+  let current = 0;
+  let selection = { choices: {}, toggles: {} };
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const cap = s => s ? s[0].toUpperCase() + s.slice(1) : s;
+  const human = s => String(s).replace(/-/g, ' ');
+
+  // recipe picker, grouped
+  const groups = {};
+  RECIPES.forEach((r, i) => (groups[r.group] = groups[r.group] || []).push([r, i]));
+  for (const [g, list] of Object.entries(groups)) {
+    const og = document.createElement('optgroup');
+    og.label = g;
+    for (const [r, i] of list) { const o = document.createElement('option'); o.value = i; o.textContent = r.name; og.appendChild(o); }
+    sel.appendChild(og);
+  }
+
+  function subsHTML(subs) {
+    const items = [];
+    for (const s of subs) {
+      if (s.kind === 'optional') { items.push('<li>' + esc(cap(s.name)) + ' can be left out</li>'); continue; }
+      if (s.groupKind === 'timer') continue;
+      const nm = o => o.bracket ? o.comps.map(c => (c.qtyRaw ? CookDag.fmtQty(c.qtyRaw) + ' ' : '') + c.display).join(' + ') : (o.display || o.name);
+      const others = s.others.map(o => {
+        let t = esc(nm(o));
+        if (o.qtyRaw && !o.inheritedQty && !o.bracket) t += ' ' + esc(CookDag.fmtQty(o.qtyRaw));
+        if (o.label) t += ' <span class="why">when “' + esc(human(o.label.split('=').pop())) + '”</span>';
+        if (o.reason) t += ' <span class="why">(' + esc(o.reason) + ')</span>';
+        return t;
+      });
+      items.push('<li>' + esc(cap(nm(s.chosen))) + ' ➝ ' + others.join('; or ') + '</li>');
+    }
+    if (!items.length) return '';
+    return '<section class="box"><div class="tab">Substitutions</div><ul>' + items.join('') + '</ul></section>';
+  }
+
+  function makesHTML(also) {
+    if (!also.length) return '';
+    const li = also.map(a => {
+      if (a.kind === 'count') return '<li>' + a.left + ' ' + esc(a.name) + ' left over <span class="why">(from step ' + (a.node.index + 1) + ')</span></li>';
+      if (a.kind === 'rest') return '<li>The rest of the ' + esc(a.name) + ' <span class="why">(only ' + a.uses.map(u => esc(CookDag.fmtQty(u.qty))).join(' + ') + ' is used)</span></li>';
+      return '<li>' + esc(cap(a.name)) + (a.qty ? ' ' + esc(CookDag.fmtQty(a.qty)) : '') + ' <span class="why">(step ' + (a.node.index + 1) + ', not used later)</span></li>';
+    });
+    return '<section class="box makes-box"><div class="tab">Also makes</div><ul>' + li.join('') + '</ul></section>';
+  }
+
+  function controls(labels, active) {
+    let h = '';
+    for (const ch of labels.choices) {
+      const id = 'choice-' + ch.name.replace(/[^a-z0-9]+/gi, '-');
+      h += '<label class="field" for="' + id + '"><span>' + esc(cap(human(ch.name))) + '</span><select id="' + id + '" data-choice="' + esc(ch.name) + '">' +
+        ch.options.map((o, k) => '<option value="' + esc(o) + '"' + (active.current[ch.name] === o ? ' selected' : '') + (ch.descs[k] ? ' title="' + esc(ch.descs[k]) + '"' : '') + '>' + esc(human(o)) + '</option>').join('') + '</select></label>';
+    }
+    for (const t of labels.toggles) {
+      const id = 'toggle-' + t.replace(/[^a-z0-9]+/gi, '-');
+      h += '<label class="toggle" for="' + id + '"><input type="checkbox" id="' + id + '" data-toggle="' + esc(t) + '"' + (active.toggles[t] ? ' checked' : '') + '> ' + esc(human(t)) + '</label>';
+    }
+    choicesEl.innerHTML = h;
+  }
+
+  function draw() {
+    let out;
+    try { out = CookDag.renderHTML(src.value, selection); }
+    catch (e) { plate.innerHTML = '<p class="empty">This source could not be drawn: ' + esc(e.message) + '</p>'; return; }
+    const a = out.analysis, m = a.meta;
+    const metaBits = [m.course, m.cuisine, m.servings && 'serves ' + m.servings, m.makes, m.yield && CookDag.fmtQty(String(m.yield))].filter(Boolean);
+    const notes = a.sections.flatMap(s => s.notes);
+    const source = m.source ? '<div class="credit">Source: ' + esc(String(m.source).replace(/<[^>]*>/g, '').trim()) + '</div>' : '';
+    plate.innerHTML =
+      '<div><h2>' + esc(m.title || 'Untitled recipe') + '</h2>' + (metaBits.length ? '<div class="meta">' + esc(metaBits.join(' · ')) + '</div>' : '') + '</div>' +
+      '<p class="scroll-hint">The chart is wider than the screen: scroll it sideways to reach the dish.</p>' +
+      (out.html || '<p class="empty">No steps on this path.</p>') +
+      '<div class="under">' + subsHTML(a.subs) + makesHTML(a.graph.alsoMakes) + '</div>' +
+      (notes.length ? '<details class="notes"><summary>Notes in the file</summary>' + notes.map(n => '<p>' + esc(n) + '</p>').join('') + '</details>' : '') +
+      source;
+    controls(a.labels, a.active);
+    reportsEl.innerHTML = a.reports.length
+      ? a.reports.map(r => '<li><span class="lvl ' + r.level + '">' + (r.level === 'info' ? 'note' : r.level) + (r.rule ? ' · rule ' + r.rule : '') + '</span><span>' + esc(r.msg) + '</span></li>').join('')
+      : '<li><span class="lvl info">ok</span><span class="empty">Nothing to report: every product is named before it is used.</span></li>';
+  }
+
+  function load(i) {
+    current = i;
+    try { history.replaceState(null, '', '#' + CookDag.slug(RECIPES[i].name)); } catch (e) {}
+    selection = { choices: {}, toggles: {} };
+    src.value = RECIPES[i].src;
+    sel.value = String(i);
+    draw();
+  }
+
+  sel.addEventListener('change', () => load(Number(sel.value)));
+  choicesEl.addEventListener('change', e => {
+    const t = e.target;
+    if (t.dataset.choice) selection.choices[t.dataset.choice] = t.value;
+    if (t.dataset.toggle) selection.toggles[t.dataset.toggle] = t.checked;
+    draw();
+  });
+  $('edit').addEventListener('click', () => {
+    const open = $('source').hidden;
+    $('source').hidden = !open;
+    $('edit').setAttribute('aria-pressed', String(open));
+    $('edit').textContent = open ? 'Hide source' : 'Edit source';
+  });
+  $('reset').addEventListener('click', () => load(current));
+  let timer;
+  src.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(draw, 180); });
+
+  const fromHash = () => {
+    const h = decodeURIComponent(location.hash.slice(1));
+    const i = RECIPES.findIndex(r => CookDag.slug(r.name) === h);
+    return i < 0 ? 0 : i;
+  };
+  window.addEventListener('hashchange', () => { const i = fromHash(); if (i !== current) load(i); });
+  load(fromHash());
+})();
+</script>

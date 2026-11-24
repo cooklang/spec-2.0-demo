@@ -5,6 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Cooklang Recipe Flow</title>
 <meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Cooklang recipes drawn as flow charts from the spec 2.0 product syntax: -> name and @&name{}. Pick a recipe, switch its choices, or edit the source and watch the chart redraw.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Cooklang">
+<meta property="og:title" content="Cooklang Recipe Flow">
+<meta property="og:description" content="A recipe is a graph. Three open Cooklang spec proposals let a plain-text recipe say which step feeds which; this demo draws them.">
+<meta property="og:url" content="https://cooklang.github.io/spec-2.0-demo/">
+<meta property="og:image" content="https://cooklang.github.io/spec-2.0-demo/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="A pancake recipe drawn as a flow chart: ingredient rows point into steps, which flow down a dark main line to a plate.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Cooklang Recipe Flow">
+<meta name="twitter:description" content="A recipe is a graph. Three open Cooklang spec proposals let a plain-text recipe say which step feeds which; this demo draws them.">
+<meta name="twitter:image" content="https://cooklang.github.io/spec-2.0-demo/og.png">
+<link rel="canonical" href="https://cooklang.github.io/spec-2.0-demo/">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -73,6 +88,14 @@ button { cursor: pointer; }
 button[aria-pressed="true"] { background: var(--line); color: #fff; border-color: var(--line); }
 .toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--ink); padding: 6px 2px; }
 #choices { display: contents; }
+.repo { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--rule);
+  color: var(--ink); text-decoration: none; font-size: 15px; background: var(--control); }
+.repo::before { content: ""; width: 16px; height: 16px; background: currentColor;
+  -webkit-mask: var(--gh) center / contain no-repeat; mask: var(--gh) center / contain no-repeat; }
+.repo:hover { border-color: var(--ink-soft); }
+.repo:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+:root { --gh: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z'/></svg>"); }
+
 
 /* ---- source editor ---- */
 .source { display: grid; gap: 8px; }
@@ -195,6 +218,7 @@ details.notes p { font-size: 13px; color: var(--board-soft); margin: 6px 0 0; }
       <label class="field" for="recipe"><span>Recipe</span><select id="recipe"></select></label>
       <div id="choices"></div>
       <button id="edit" type="button" aria-pressed="false" aria-controls="source">Edit source</button>
+      <a class="repo" href="https://github.com/cooklang/spec-2.0-demo">Code on GitHub</a>
     </div>
   </header>
 

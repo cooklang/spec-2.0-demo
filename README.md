@@ -109,9 +109,15 @@ recipes/pack/          recipes from an AI-written pack, converted by hand
 recipes/bases/         shortcrust and chicken stock, referenced by other recipes
 test/sweep.js          npm test: every recipe under every choice and toggle
 test/graphs.js         node test/graphs.js [name]: each recipe's graph and reports
+social/card.html       the social preview card; social/render-og.sh renders it to og.png
+og.png                 1200×630 preview used by the Open Graph and Twitter tags
 ```
 
 No dependencies. Node 18 or later for the build and the tests.
+
+After changing the page, run `node build.js`, then `./social/render-og.sh` if the
+pancake chart changed (it needs Google Chrome; set `CHROME` to its path off macOS).
+GitHub serves `index.html` and `og.png` from `main` with Pages, so pushing publishes both.
 
 `src/dag-core.js` exports `analyse(source, selection)`, which returns the parsed recipe,
 its graph and the reports, and `renderHTML(source, selection)`, which returns the chart.

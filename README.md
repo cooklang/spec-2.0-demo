@@ -8,7 +8,7 @@ Three open proposals to the [Cooklang spec](https://github.com/cooklang/spec) ad
 missing marks. This repo draws recipes written with them, so you can see what the
 syntax buys before it is accepted.
 
-**Try it:** open `index.html` in a browser. It is one static file and works offline,
+**Try it:** https://cooklang.github.io/spec-2.0-demo/ — or open `index.html` in a browser. It is one static file and works offline,
 except for the web fonts. Pick a recipe, switch its choices, or press *Edit source* and
 type: the chart redraws as you go.
 

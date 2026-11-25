@@ -4,6 +4,7 @@
   "description": "Cooklang recipes drawn as flow charts from the spec 2.0 product syntax (-> name, @&name{})",
   "scripts": {
     "build": "node build.js",
-    "test": "node test/sweep.js"
+    "test": "node test/sweep.js",
+    "parity": "node test/parity.js"
   }
 }

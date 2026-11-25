@@ -138,6 +138,7 @@ button[aria-pressed="true"] { background: var(--line); color: #fff; border-color
 .step .act { font-weight: 600; }
 .step .prod { font-family: var(--font-mono); font-style: normal; font-size: .88em; padding: 0 4px; border-radius: 4px; background: rgba(255,255,255,.5); }
 .step .tm { font-family: var(--font-mono); font-size: .9em; white-space: nowrap; }
+.step .cond { font-style: italic; }
 .step .cw { text-decoration: underline dotted; text-decoration-color: rgba(29,35,41,.45); text-underline-offset: 3px; }
 .makes { margin-top: 6px; font-family: var(--font-mono); font-size: 12px; opacity: .8; }
 .makes i { font-style: normal; font-weight: 500; }
@@ -232,7 +233,9 @@ details.notes p { font-size: 13px; color: var(--board-soft); margin: 6px 0 0; }
         <li>The right-hand column is the longest line to the dish; everything else flows into it from the left. A product used twice is drawn once; the second use shows <i>“from step N”</i>.</li>
         <li>Steps with nothing going in at the top of the recipe (grease the tin, preheat) sit above the chart. Bold words are the step actions written in backticks.</li>
       </ul>
-      <p>The syntax is in three open proposals to the Cooklang spec:
+      <p>Your browser parses each recipe with <a href="https://github.com/cooklang/cooklang-rs/tree/spec-2.0">cooklang-rs</a>
+        (the <code>spec-2.0</code> branch) compiled to WebAssembly.
+        The syntax is in three open proposals to the Cooklang spec:
         <a href="https://github.com/cooklang/spec/pull/165">0027 products</a>,
         <a href="https://github.com/cooklang/spec/pull/167">0029 step actions</a> and
         <a href="https://github.com/cooklang/spec/pull/162">0025 alternatives and labels</a>.</p>
@@ -244,9 +247,14 @@ details.notes p { font-size: 13px; color: var(--board-soft); margin: 6px 0 0; }
   </div>
 </div>
 
+<script>/*__WASM_GLUE__*/
+window.wasm_bindgen = wasm_bindgen;</script>
+<script>/*__PARSER__*/</script>
+<script>/*__ADAPTER__*/</script>
 <script>/*__CORE__*/</script>
 <script>
 const RECIPES = /*__RECIPES__*/[];
+const COOKLANG_WASM = '/*__WASM_B64__*/';
 (function () {
   const $ = id => document.getElementById(id);
   const sel = $('recipe'), src = $('src'), plate = $('plate'), choicesEl = $('choices'), reportsEl = $('reports');
@@ -311,7 +319,7 @@ const RECIPES = /*__RECIPES__*/[];
 
   function draw() {
     let out;
-    try { out = CookDag.renderHTML(src.value, selection); }
+    try { out = CookDag.renderHTML(CookAdapter.analyse(CookParser.parse(src.value, selection))); }
     catch (e) { plate.innerHTML = '<p class="empty">This source could not be drawn: ' + esc(e.message) + '</p>'; return; }
     const a = out.analysis, m = a.meta;
     const metaBits = [m.course, m.cuisine, m.servings && 'serves ' + m.servings, m.makes, m.yield && CookDag.fmtQty(String(m.yield))].filter(Boolean);
@@ -362,6 +370,12 @@ const RECIPES = /*__RECIPES__*/[];
     return i < 0 ? 0 : i;
   };
   window.addEventListener('hashchange', () => { const i = fromHash(); if (i !== current) load(i); });
+  try {
+    CookParser.init(CookParser.fromBase64(COOKLANG_WASM));
+  } catch (e) {
+    plate.innerHTML = '<p class="empty">The parser could not start in this browser: ' + esc(e.message) + '</p>';
+    return;
+  }
   load(fromHash());
 })();
 </script>

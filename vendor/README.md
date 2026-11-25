@@ -2,7 +2,7 @@
 
 `cooklang_wasm.js` and `cooklang_wasm_bg.wasm` are
 [cooklang-rs](https://github.com/cooklang/cooklang-rs), branch `spec-2.0`, commit
-`92e924a59d6cca382033eb30062f252e532c3d19`, built to WebAssembly. Licence: MIT, see
+`5ee70a28dee5a711dac8adbbf461edadb9c94965`, built to WebAssembly. Licence: MIT, see
 `LICENSE-cooklang-rs`.
 
 The demo calls one function, `Parser.parse_spec2(source, selection)`, added on that

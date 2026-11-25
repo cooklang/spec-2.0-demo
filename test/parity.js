@@ -28,14 +28,23 @@ for (const f of files) {
   for (const t of first.labels.toggles) sels.push({ toggles: { [t]: true } });
   for (const sel of sels) {
     runs++;
-    const a = A.analyse(P.parse(src, sel)).graph.live;
-    const b = OLD.renderHTML(src, sel).analysis.graph.live;
-    const sa = sig(a), sb = sig(b);
+    const na = A.analyse(P.parse(src, sel)), nb = OLD.renderHTML(src, sel).analysis;
+    const a = na.graph.live, b = nb.graph.live;
+    // edges, then the dish, the rows above the chart, "also makes" and the swaps
+    const extra = (an, live) => [
+      'root: ' + (an.graph.root ? live.indexOf(an.graph.root) + 1 : '-'),
+      'setup: ' + an.graph.setup.map(x => x.raw.replace(/\W+/g, ' ').trim().slice(0, 20).toLowerCase()).join(' / '),
+      'also makes: ' + an.graph.alsoMakes.map(x => x.name.toLowerCase() + ':' + x.kind).sort().join(', '),
+      'swaps: ' + an.subs.map(x => x.kind === 'group'
+        ? (x.chosen.display || x.chosen.name).toLowerCase() + '>' + x.others.map(o => (o.bracket ? o.name : (o.display || o.name || '')).toLowerCase()).join('/')
+        : 'optional ' + x.name.toLowerCase()).sort().join(', '),
+    ];
+    const sa = sig(a).concat(extra(na, a)), sb = sig(b).concat(extra(nb, b));
     if (JSON.stringify(sa) === JSON.stringify(sb)) { same++; continue; }
     console.log('\n' + path.basename(f), JSON.stringify(sel), `parser ${a.length} steps, js ${b.length}`);
     for (let i = 0; i < Math.max(sa.length, sb.length); i++) {
-      if (sa[i] !== sb[i]) console.log('  step ' + (i + 1) + '\n    parser: ' + sa[i] + '\n    js:     ' + sb[i]);
+      if (sa[i] !== sb[i]) console.log('  ' + (i < a.length ? 'step ' + (i + 1) : 'summary') + '\n    parser: ' + sa[i] + '\n    js:     ' + sb[i]);
     }
   }
 }
-console.log(`\n${same} of ${runs} runs draw the same graph`);
+console.log(`\n${same} of ${runs} runs draw the same graph, dish, rows above the chart, by-products and swaps`);

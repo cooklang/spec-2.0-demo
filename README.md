@@ -10,8 +10,8 @@ syntax buys before it is accepted.
 
 The page runs the real parser: [cooklang-rs](https://github.com/cooklang/cooklang-rs) on
 its [`spec-2.0` branch](https://github.com/cooklang/cooklang-rs/tree/spec-2.0), which
-implements the three proposals behind extension flags, compiled to WebAssembly and
-inlined into `index.html`.
+implements most of the three proposals behind extension flags (what is missing is listed
+under *Not done*), compiled to WebAssembly and inlined into `index.html`.
 
 **Try it:** https://cooklang.github.io/spec-2.0-demo/, or open `index.html` in a browser.
 It is one static file (about 2 MB, most of it the parser) and works offline, except
@@ -127,7 +127,8 @@ recipes/pack/          recipes from an AI-written pack, converted by hand
 recipes/bases/         shortcrust and chicken stock, referenced by other recipes
 test/sweep.js          npm test: every recipe under every choice and toggle
 test/graphs.js         node test/graphs.js [name]: each recipe's graph and reports
-test/parity.js         npm run parity: the parser's graphs against the first JS reading
+test/parity.js         npm run parity: the parser's graphs, dishes, by-products and swaps
+                       against the first JS reading
 test/reference/        that first reading, a regex parser kept only for the parity test
 social/card.html       the social preview card; social/render-og.sh renders it to og.png
 og.png                 1200×630 preview used by the Open Graph and Twitter tags
@@ -149,9 +150,18 @@ chart. A selection looks like
 
 Scaling, unit conversion, a Gantt chart or a plan for two cooks, `.menu` files, and
 drawing a product used by two later steps as a real fork (it is a "from step N" row).
-The parser branch is a draft that tracks the proposals and is not released. Its
-ingredient list and shopping list were not changed for rule 25, and were not checked
-against it.
+The parser branch is a draft that tracks the proposals and is not released. Not there
+yet:
+
+- **0027:** the ingredient and shopping lists were not changed for rule 25, and the
+  rule 14 check of amounts with units against the amount made is missing.
+- **0029:** optional actions (`` `Garnish?` ``) and which ingredients belong to which
+  action (Part D).
+- **0025:** labels on notes, metadata an option replaces (`time`, `servings`, `yield`),
+  and toggle defaults set in front matter.
+
+The page was checked in Chrome. It starts the parser synchronously on load, which takes
+a moment on a slow phone.
 
 ## Credits
 
